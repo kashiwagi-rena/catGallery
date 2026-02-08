@@ -8,12 +8,12 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
-	// runtimeConfig: {
-	// 	public: {
-	// 		supabaseUrl: process.env.SUPABASE_URL,
-	// 		supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-	// 	},
-	// },
+	runtimeConfig: {
+		public: {
+			supabaseUrl: process.env.SUPABASE_URL,
+			supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
+		},
+	},
 
 	app: {
 		head: {

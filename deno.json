@@ -10,7 +10,8 @@
 		"typecheck": "nuxt typecheck"
 	},
 	"imports": {
-		"#app": "https://deno.land/x/nuxt/dist/app/index.js"
+		"#app": "https://deno.land/x/nuxt/dist/app/index.js",
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@^2.39.0"
 	},
 	"compilerOptions": {
 		"jsx": "react-jsx",
