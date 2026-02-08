@@ -273,3 +273,6 @@ MIT
 - デプロイ＆調整: 1時間
 
 Happy Coding! 🐱✨
+
+assetsフォルダは、app配下に書くこと
+https://github.com/nuxt/nuxt/issues/31628
