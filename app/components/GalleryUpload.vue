@@ -6,6 +6,8 @@ const isUploading = ref(false)
 const errorMessage = ref<string>('')
 const successMessage = ref<string>('')
 
+const { uploadGallery: uploadToSupabase } = useGalleryUpload()
+
 // Emitイベント定義
 const emit = defineEmits<{
   uploaded: [photoUrl: string]
@@ -76,8 +78,33 @@ const clearSelection = () => {
  * アップロード処理（次のIssueで実装）
  */
 const uploadPhoto = async () => {
-  // Issue #6 で実装
-  console.log('Upload:', selectedFile.value)
+  if (!selectedFile.value) return;
+
+  isUploading.value = true;
+  errorMessage.value = '';
+  successMessage.value = '';
+
+  try {
+    const result = await uploadToSupabase(selectedFile.value);
+
+    if (result.success && result.data) {
+      successMessage.value = 'アップロードが完了しました！'
+
+      emit('uploaded', result.data.url)
+
+      setTimeout(() => {
+        clearSelection();
+        successMessage.value = '';
+      }, 2000)
+    } else {
+      errorMessage.value = result.error || 'アップロードに失敗しました'
+    }
+  } catch(err) {
+    console.error('Upload error:', err);
+    errorMessage.value = 'アップロード中にエラーが発生しました'
+  } finally {
+    isUploading.value = false;
+  }
 }
 
 /**
