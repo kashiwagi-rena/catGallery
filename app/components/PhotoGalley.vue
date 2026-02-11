@@ -1,95 +1,143 @@
 <script setup lang="ts">
-import { usePhotoList } from '~/composables/usePhotoList'
-import type { Gallery } from '~/types/gallery'
+import { usePhotoList } from "~/composables/usePhotoList"
+import type { Gallery } from "~/types/gallery"
 
 const photos = ref<Gallery[]>([])
 const isLoading = ref(false)
-const errorMessage = ref('')
+const errorMessage = ref("")
 const selectedPhoto = ref<Gallery | null>(null)
+const isDeleting = ref(false)
+const deleteSuccessMessage = ref("")
+const deleteErrorMessage = ref("")
 
-const { getPhotos } = usePhotoList();
+const { getPhotos } = usePhotoList()
+const { deletePhoto } = usePhotoDelete()
 
 // Emitイベント定義
 const emit = defineEmits<{
-  delete: [photoId: string]
+	delete: [photoId: string]
 }>()
 
 /**
- * 写真を読み込む（Issue #8で実装）
+ * 写真を読み込む
  */
 const loadPhotos = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
+	isLoading.value = true
+	errorMessage.value = ""
 
-  try {
-    photos.value = await getPhotos();
-  } catch (err) {
-    console.error('Load photos error:', err)
-    errorMessage.value =
-      err instanceof Error ? err.message : '写真の読み込みに失敗しました'
-  } finally {
-    isLoading.value = false
-  }
+	try {
+		photos.value = await getPhotos()
+	} catch (err) {
+		console.error("Load photos error:", err)
+		errorMessage.value = "写真の読み込みに失敗しました"
+	} finally {
+		isLoading.value = false
+	}
 }
 
 /**
  * モーダルを開く
  */
 const openModal = (photo: Gallery) => {
-  selectedPhoto.value = photo
+	selectedPhoto.value = photo
 }
 
 /**
  * モーダルを閉じる
  */
 const closeModal = () => {
-  selectedPhoto.value = null
+	selectedPhoto.value = null
 }
 
 /**
- * 削除処理（Issue #9で実装）
+ * 削除確認
  */
-const handleDelete = (photoId: string) => {
-  emit('delete', photoId)
-  closeModal()
+const confirmDelete = () => {
+	if (!selectedPhoto.value) return
+
+	const confirmed = window.confirm(
+		`「${selectedPhoto.value.name}」を削除しますか？\nこの操作は取り消せません。`,
+	)
+
+	if (confirmed) {
+		handleDelete(selectedPhoto.value.id)
+	}
+}
+
+/**
+ * 削除処理
+ */
+const handleDelete = async (photoId: string) => {
+	isDeleting.value = true
+	deleteSuccessMessage.value = ""
+	deleteErrorMessage.value = ""
+
+	try {
+		// selectedPhotoからファイル名を取得してSupabaseで削除
+		const fileName = selectedPhoto.value?.name
+		if (!fileName) {
+			throw new Error('ファイル名が見つかりません')
+		}
+
+		const result = await deletePhoto(fileName)
+
+		// ギャラリーから削除（IDで比較）
+		photos.value = photos.value.filter((photo) => photo.id !== photoId)
+
+		// 成功メッセージ
+		deleteSuccessMessage.value = result.message
+		setTimeout(() => {
+			deleteSuccessMessage.value = ""
+		}, 3000)
+
+		// モーダルを閉じる
+		closeModal()
+	} catch (err) {
+		console.error("Delete error:", err)
+		deleteErrorMessage.value = err instanceof Error ? err.message : "削除に失敗しました"
+		setTimeout(() => {
+			deleteErrorMessage.value = ""
+		}, 5000)
+	} finally {
+		isDeleting.value = false
+	}
 }
 
 /**
  * 日付のフォーマット
  */
 const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+	const date = new Date(dateString)
+	return date.toLocaleDateString("ja-JP", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	})
 }
 
 /**
  * ファイルサイズのフォーマット
  */
 const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+	if (bytes === 0) return "0 Bytes"
+	const k = 1024
+	const sizes = ["Bytes", "KB", "MB"]
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
 }
 
 // コンポーネントマウント時に写真を読み込む
 onMounted(() => {
-  loadPhotos()
+	loadPhotos()
 })
 
 // 外部から再読み込みできるようにする
 defineExpose({
-  loadPhotos,
+	loadPhotos,
 })
 </script>
-
 
 <template>
   <div class="gallery-container">
@@ -149,13 +197,40 @@ defineExpose({
           <p>{{ formatDate(selectedPhoto.created_at) }}</p>
           <p>{{ formatFileSize(selectedPhoto.size) }}</p>
         </div>
-        <!-- 削除ボタン（Issue #9で実装） -->
-        <button
-          class="modal__delete"
-          @click="handleDelete(selectedPhoto.id)"
-        >
-          🗑️ 削除
-        </button>
+        <!-- モーダル内の削除ボタン -->
+        <div v-if="selectedPhoto" class="modal" @click="closeModal">
+          <div class="modal__content" @click.stop>
+            <button class="modal__close" @click="closeModal">✕</button>
+            <img
+              :src="selectedPhoto.url"
+              :alt="selectedPhoto.name"
+              class="modal__image"
+            />
+            <div class="modal__info">
+              <p><strong>{{ selectedPhoto.name }}</strong></p>
+              <p>{{ formatDate(selectedPhoto.created_at) }}</p>
+              <p>{{ formatFileSize(selectedPhoto.size) }}</p>
+            </div>
+            <button
+              class="modal__delete"
+              :disabled="isDeleting"
+              @click="confirmDelete"
+            >
+              <span v-if="!isDeleting">🗑️ 削除</span>
+              <span v-else>⏳ 削除中...</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 削除成功メッセージ -->
+        <div v-if="deleteSuccessMessage" class="success-toast">
+          ✅ {{ deleteSuccessMessage }}
+        </div>
+
+        <!-- 削除エラーメッセージ -->
+        <div v-if="deleteErrorMessage" class="error-toast">
+          ⚠️ {{ deleteErrorMessage }}
+        </div>
       </div>
     </div>
   </div>
@@ -287,7 +362,7 @@ h2 {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.9);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -336,13 +411,9 @@ h2 {
 }
 
 .modal__info {
-  padding: 1.5rem;
+  padding: 0.3rem 1.5rem;
   background-color: #f5f5f5;
-}
-
-.modal__info p {
-  margin: 0.5rem 0;
-  color: #333;
+  gap: 0.5rem
 }
 
 .modal__delete {
@@ -359,6 +430,55 @@ h2 {
 
 .modal__delete:hover {
   background-color: #d32f2f;
+}
+
+.modal__delete:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* トーストメッセージ */
+.success-toast,
+.error-toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  animation: slideIn 0.3s ease;
+}
+
+.success-toast {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.error-toast {
+  background-color: #f44336;
+  color: white;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .success-toast,
+  .error-toast {
+    right: 1rem;
+    left: 1rem;
+    bottom: 1rem;
+  }
 }
 
 /* レスポンシブ */

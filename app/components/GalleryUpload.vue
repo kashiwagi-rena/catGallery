@@ -1,121 +1,121 @@
 <script setup lang="ts">
 const selectedFile = ref<File | null>(null)
-const previewUrl = ref<string>('')
+const previewUrl = ref<string>("")
 const isDragging = ref(false)
 const isUploading = ref(false)
-const errorMessage = ref<string>('')
-const successMessage = ref<string>('')
+const errorMessage = ref<string>("")
+const successMessage = ref<string>("")
 
 const { uploadGallery: uploadToSupabase } = useGalleryUpload()
 
 // Emitイベント定義
 const emit = defineEmits<{
-  uploaded: [photoUrl: string]
+	uploaded: [photoUrl: string]
 }>()
 
 /**
  * ファイル選択ハンドラ
  */
 const handleFileSelect = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files[0]) {
-    processFile(target.files[0])
-  }
+	const target = event.target as HTMLInputElement
+	if (target.files && target.files[0]) {
+		processFile(target.files[0])
+	}
 }
 
 /**
  * ドロップハンドラ
  */
 const handleDrop = (event: DragEvent) => {
-  isDragging.value = false
-  const files = event.dataTransfer?.files
-  if (files && files[0]) {
-    processFile(files[0])
-  }
+	isDragging.value = false
+	const files = event.dataTransfer?.files
+	if (files && files[0]) {
+		processFile(files[0])
+	}
 }
 
 /**
  * ファイル処理
  */
 const processFile = (file: File) => {
-  errorMessage.value = ''
-  successMessage.value = ''
+	errorMessage.value = ""
+	successMessage.value = ""
 
-  // ファイルタイプチェック
-  if (!file.type.startsWith('image/')) {
-    errorMessage.value = '画像ファイルを選択してください'
-    return
-  }
+	// ファイルタイプチェック
+	if (!file.type.startsWith("image/")) {
+		errorMessage.value = "画像ファイルを選択してください"
+		return
+	}
 
-  // ファイルサイズチェック（5MB制限）
-  const maxSize = 5 * 1024 * 1024 // 5MB
-  if (file.size > maxSize) {
-    errorMessage.value = 'ファイルサイズは5MB以下にしてください'
-    return
-  }
+	// ファイルサイズチェック（5MB制限）
+	const maxSize = 5 * 1024 * 1024 // 5MB
+	if (file.size > maxSize) {
+		errorMessage.value = "ファイルサイズは5MB以下にしてください"
+		return
+	}
 
-  selectedFile.value = file
+	selectedFile.value = file
 
-  // プレビュー生成
-  const reader = new FileReader()
-  reader.onload = (e) => {
-    previewUrl.value = e.target?.result as string
-  }
-  reader.readAsDataURL(file)
+	// プレビュー生成
+	const reader = new FileReader()
+	reader.onload = (e) => {
+		previewUrl.value = e.target?.result as string
+	}
+	reader.readAsDataURL(file)
 }
 
 /**
  * 選択解除
  */
 const clearSelection = () => {
-  selectedFile.value = null
-  previewUrl.value = ''
-  errorMessage.value = ''
-  successMessage.value = ''
+	selectedFile.value = null
+	previewUrl.value = ""
+	errorMessage.value = ""
+	successMessage.value = ""
 }
 
 /**
  * アップロード処理（次のIssueで実装）
  */
 const uploadPhoto = async () => {
-  if (!selectedFile.value) return;
+	if (!selectedFile.value) return
 
-  isUploading.value = true;
-  errorMessage.value = '';
-  successMessage.value = '';
+	isUploading.value = true
+	errorMessage.value = ""
+	successMessage.value = ""
 
-  try {
-    const result = await uploadToSupabase(selectedFile.value);
+	try {
+		const result = await uploadToSupabase(selectedFile.value)
 
-    if (result.success && result.data) {
-      successMessage.value = 'アップロードが完了しました！'
+		if (result.success && result.data) {
+			successMessage.value = "アップロードが完了しました！"
 
-      emit('uploaded', result.data.url)
+			emit("uploaded", result.data.url)
 
-      setTimeout(() => {
-        clearSelection();
-        successMessage.value = '';
-      }, 2000)
-    } else {
-      errorMessage.value = result.error || 'アップロードに失敗しました'
-    }
-  } catch(err) {
-    console.error('Upload error:', err);
-    errorMessage.value = 'アップロード中にエラーが発生しました'
-  } finally {
-    isUploading.value = false;
-  }
+			setTimeout(() => {
+				clearSelection()
+				successMessage.value = ""
+			}, 2000)
+		} else {
+			errorMessage.value = result.error || "アップロードに失敗しました"
+		}
+	} catch (err) {
+		console.error("Upload error:", err)
+		errorMessage.value = "アップロード中にエラーが発生しました"
+	} finally {
+		isUploading.value = false
+	}
 }
 
 /**
  * ファイルサイズのフォーマット
  */
 const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+	if (bytes === 0) return "0 Bytes"
+	const k = 1024
+	const sizes = ["Bytes", "KB", "MB"]
+	const i = Math.floor(Math.log(bytes) / Math.log(k))
+	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
 }
 </script>
 

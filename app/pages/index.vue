@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import GalleryUpload from '~/components/GalleryUpload.vue';
-import PhotoGalley from '~/components/PhotoGalley.vue';
+import GalleryUpload from "~/components/GalleryUpload.vue"
+import PhotoGalley from "~/components/PhotoGalley.vue"
 
-const galleryRef = ref();
+const galleryRef = ref()
 
 const handleUploaded = (galleryUrl: string) => {
-  console.log('Uploaded:', galleryUrl);
-  galleryRef.value?.loadPhotos();
+	console.log("Uploaded:", galleryUrl)
+	galleryRef.value?.loadPhotos()
 }
 
 const handleDelete = (photoId: string) => {
-  console.log('Delete:', photoId);
+	console.log("Delete:", photoId)
 }
 </script>
 

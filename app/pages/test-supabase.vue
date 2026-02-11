@@ -7,25 +7,25 @@
 </template>
 
 <script setup lang="ts">
-import { useSupabase } from '~/composables/useSupabase'
+import { useSupabase } from "~/composables/useSupabase"
 
-const result = ref<string>('')
+const result = ref<string>("")
 
 const testConnection = async () => {
-  try {
-    const supabase = useSupabase()
+	try {
+		const supabase = useSupabase()
 
-    // バケット一覧を取得してみる
-    const { data, error } = await supabase.storage.listBuckets()
+		// バケット一覧を取得してみる
+		const { data, error } = await supabase.storage.listBuckets()
 
-    if (error) {
-      result.value = `エラー: ${error.message}`
-    } else {
-      result.value = `成功！バケット数: ${data?.length}`
-      console.log('Buckets:', data)
-    }
-  } catch (err) {
-    result.value = `例外発生: ${err}`
-  }
+		if (error) {
+			result.value = `エラー: ${error.message}`
+		} else {
+			result.value = `成功！バケット数: ${data?.length}`
+			console.log("Buckets:", data)
+		}
+	} catch (err) {
+		result.value = `例外発生: ${err}`
+	}
 }
 </script>
