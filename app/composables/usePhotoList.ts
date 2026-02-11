@@ -18,8 +18,6 @@ export const usePhotoList = () => {
           sortBy: { column: 'created_at', order: 'desc' },
         })
 
-        console.log(files);
-
       if (error) {
         console.error('List files error:', error)
         throw new Error(`ファイル一覧の取得に失敗しました: ${error.message}`)
@@ -34,12 +32,9 @@ export const usePhotoList = () => {
         .filter((file: SupabaseFileObject) => file.name !== '.emptyFolderPlaceholder') // 空フォルダプレースホルダーを除外
         .map((file: SupabaseFileObject) => {
           const filePath = `photos/${file.name}`
-          console.log("filmPath:", filePath, "name", file.name);
           const { data: urlData } = supabase.storage
             .from(STORAGE_BUCKET)
             .getPublicUrl(filePath)
-
-            console.log("urlData:", urlData);
 
           return {
             id: file.id,
@@ -52,7 +47,6 @@ export const usePhotoList = () => {
 
       return photos
     } catch (err) {
-      console.error('Get photos exception:', err)
       throw err
     }
   }
