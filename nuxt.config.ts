@@ -1,12 +1,12 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import process from "node:process";
+import process from "node:process"
 export default defineNuxtConfig({
 	compatibilityDate: "2025-07-15",
 	devtools: { enabled: true },
 
 	modules: [],
 
-  css: ['~/assets/css/main.css'],
+	css: ["~/assets/css/main.css"],
 
 	runtimeConfig: {
 		public: {
@@ -28,5 +28,4 @@ export default defineNuxtConfig({
 			],
 		},
 	},
-
 })
