@@ -1,3 +1,96 @@
+<script setup lang="ts">
+import { usePhotoList } from '~/composables/usePhotoList'
+import type { Gallery } from '~/types/gallery'
+
+const photos = ref<Gallery[]>([])
+const isLoading = ref(false)
+const errorMessage = ref('')
+const selectedPhoto = ref<Gallery | null>(null)
+
+const { getPhotos } = usePhotoList();
+
+// Emitイベント定義
+const emit = defineEmits<{
+  delete: [photoId: string]
+}>()
+
+/**
+ * 写真を読み込む（Issue #8で実装）
+ */
+const loadPhotos = async () => {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    photos.value = await getPhotos();
+  } catch (err) {
+    console.error('Load photos error:', err)
+    errorMessage.value =
+      err instanceof Error ? err.message : '写真の読み込みに失敗しました'
+  } finally {
+    isLoading.value = false
+  }
+}
+
+/**
+ * モーダルを開く
+ */
+const openModal = (photo: Gallery) => {
+  selectedPhoto.value = photo
+}
+
+/**
+ * モーダルを閉じる
+ */
+const closeModal = () => {
+  selectedPhoto.value = null
+}
+
+/**
+ * 削除処理（Issue #9で実装）
+ */
+const handleDelete = (photoId: string) => {
+  emit('delete', photoId)
+  closeModal()
+}
+
+/**
+ * 日付のフォーマット
+ */
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString)
+  return date.toLocaleDateString('ja-JP', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+/**
+ * ファイルサイズのフォーマット
+ */
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+}
+
+// コンポーネントマウント時に写真を読み込む
+onMounted(() => {
+  loadPhotos()
+})
+
+// 外部から再読み込みできるようにする
+defineExpose({
+  loadPhotos,
+})
+</script>
+
+
 <template>
   <div class="gallery-container">
     <h2>🖼️ 猫の写真ギャラリー 🖼️</h2>
@@ -67,97 +160,6 @@
     </div>
   </div>
 </template>
-
-<script setup lang="ts">
-import { usePhotoList } from '~/composables/usePhotoList'
-import type { Gallery } from '~/types/gallery'
-
-const photos = ref<Gallery[]>([])
-const isLoading = ref(false)
-const errorMessage = ref('')
-const selectedPhoto = ref<Gallery | null>(null)
-
-const { getPhotos } = usePhotoList();
-
-// Emitイベント定義
-const emit = defineEmits<{
-  delete: [photoId: string]
-}>()
-
-/**
- * 写真を読み込む（Issue #8で実装）
- */
-const loadPhotos = async () => {
-  isLoading.value = true
-  errorMessage.value = ''
-
-  try {
-    photos.value = await getPhotos();
-  } catch (err) {
-    console.error('Load photos error:', err)
-    errorMessage.value = '写真の読み込みに失敗しました'
-  } finally {
-    isLoading.value = false
-  }
-}
-
-/**
- * モーダルを開く
- */
-const openModal = (photo: Gallery) => {
-  selectedPhoto.value = photo
-}
-
-/**
- * モーダルを閉じる
- */
-const closeModal = () => {
-  selectedPhoto.value = null
-}
-
-/**
- * 削除処理（Issue #9で実装）
- */
-const handleDelete = (photoId: string) => {
-  emit('delete', photoId)
-  closeModal()
-}
-
-/**
- * 日付のフォーマット
- */
-const formatDate = (dateString: string): string => {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-/**
- * ファイルサイズのフォーマット
- */
-const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes'
-  const k = 1024
-  const sizes = ['Bytes', 'KB', 'MB']
-  const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
-}
-
-// コンポーネントマウント時に写真を読み込む
-onMounted(() => {
-  loadPhotos()
-})
-
-// 外部から再読み込みできるようにする
-defineExpose({
-  loadPhotos,
-})
-</script>
 
 <style scoped>
 .gallery-container {
