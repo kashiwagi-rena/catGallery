@@ -1,6 +1,6 @@
 <template>
   <div class="gallery-container">
-    <h2>🖼️ 猫の写真ギャラリー</h2>
+    <h2>🖼️ 猫の写真ギャラリー 🖼️</h2>
 
     <!-- ローディング状態 -->
     <div v-if="isLoading" class="loading">
@@ -35,7 +35,6 @@
           loading="lazy"
         />
         <div class="gallery-item__overlay">
-          <p class="gallery-item__name">{{ photo.name }}</p>
           <p class="gallery-item__date">
             {{ formatDate(photo.created_at) }}
           </p>
@@ -70,12 +69,15 @@
 </template>
 
 <script setup lang="ts">
+import { usePhotoList } from '~/composables/usePhotoList'
 import type { Gallery } from '~/types/gallery'
 
 const photos = ref<Gallery[]>([])
 const isLoading = ref(false)
 const errorMessage = ref('')
 const selectedPhoto = ref<Gallery | null>(null)
+
+const { getPhotos } = usePhotoList();
 
 // Emitイベント定義
 const emit = defineEmits<{
@@ -90,11 +92,7 @@ const loadPhotos = async () => {
   errorMessage.value = ''
 
   try {
-    // Issue #8 で実装
-    console.log('Loading photos...')
-
-    // ダミーデータ（Issue #8で削除）
-    photos.value = []
+    photos.value = await getPhotos();
   } catch (err) {
     console.error('Load photos error:', err)
     errorMessage.value = '写真の読み込みに失敗しました'
