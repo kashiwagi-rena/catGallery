@@ -1,7 +1,7 @@
 {
-	"buildCommand": "deno task build",
-	"devCommand": "deno task dev",
-	"installCommand": "deno install",
-	"framework": "nuxtjs",
-	"outputDirectory": ".output/public"
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "framework": "nuxtjs",
+  "outputDirectory": ".output/public"
 }
