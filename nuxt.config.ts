@@ -5,7 +5,7 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 
 	nitro: {
-		preset: 'deno'
+		preset: 'deno-deploy'
 	},
 
 
