@@ -2,13 +2,6 @@
 	"name": "catGallery",
 	"type": "module",
 	"private": true,
-	"scripts": {
-		"build": "nuxt build",
-		"dev": "nuxt dev",
-		"generate": "nuxt generate",
-		"preview": "nuxt preview",
-		"postinstall": "nuxt prepare"
-	},
 	"dependencies": {
 		"@supabase/supabase-js": "^2.45.7",
 		"nuxt": "^4.3.0",

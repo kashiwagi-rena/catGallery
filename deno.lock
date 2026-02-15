@@ -5316,6 +5316,7 @@
     "packageJson": {
       "dependencies": [
         "npm:@biomejs/biome@^2.3.14",
+        "npm:@supabase/supabase-js@^2.45.7",
         "npm:nuxt@^4.3.0",
         "npm:vue-router@^4.6.4",
         "npm:vue@^3.5.27"
