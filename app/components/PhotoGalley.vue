@@ -128,9 +128,25 @@ const formatFileSize = (bytes: number): string => {
 	return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i]
 }
 
+/**
+ * モーダル表示時にbodyのスクロールを止める
+ */
+watch(selectedPhoto, (newValue) => {
+	if (newValue) {
+		document.body.style.overflow = 'hidden'
+	} else {
+		document.body.style.overflow = ''
+	}
+})
+
 // コンポーネントマウント時に写真を読み込む
 onMounted(() => {
 	loadPhotos()
+})
+
+// コンポーネントアンマウント時にスクロールを復元
+onUnmounted(() => {
+	document.body.style.overflow = ''
 })
 
 // 外部から再読み込みできるようにする
