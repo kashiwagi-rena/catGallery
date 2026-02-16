@@ -20,6 +20,3 @@ const handleDelete = (photoId: string) => {
     <PhotoGalley ref="galleryRef" @delete="handleDelete" />
   </div>
 </template>
-
-<style scoped lang="css">
-</style>

@@ -1,11 +1,3 @@
-<template>
-  <div>
-    <h1>Supabase接続テスト</h1>
-    <button @click="testConnection">接続テスト</button>
-    <p v-if="result">{{ result }}</p>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { useSupabase } from "~/composables/useSupabase"
 
@@ -29,3 +21,12 @@ const testConnection = async () => {
 	}
 }
 </script>
+
+
+<template>
+  <div>
+    <h1>Supabase接続テスト</h1>
+    <button @click="testConnection">接続テスト</button>
+    <p v-if="result">{{ result }}</p>
+  </div>
+</template>
