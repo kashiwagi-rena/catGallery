@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>オセロ — Web版</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, -apple-system, "Hiragino Kaku Gothic ProN", sans-serif; background: #0b3d0b; color: #fff; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 16px 12px 32px; }
+  h1 { margin: 4px 0 2px; font-size: 28px; letter-spacing: 4px; }
+  p.sub { margin: 0 0 14px; color: #cfe8cf; font-size: 13px; }
+  #board { display: grid; grid-template-columns: repeat(8, 1fr); width: min(92vw, 480px); aspect-ratio: 1; background: #008000; border: 3px solid #003d00; border-radius: 6px; overflow: hidden; }
+  .cell { position: relative; border: 1px solid rgba(0,60,0,.9); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .cell.hint::after { content: ""; width: 22%; height: 22%; border-radius: 50%; background: rgba(180,230,180,.9); }
+  .cell.hint { cursor: pointer; }
+  .disc { width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,.4); }
+  .disc.black { background: #141414; }
+  .disc.white { background: #f5f5f5; }
+  #status { margin: 14px 0 10px; font-size: 16px; min-height: 24px; text-align: center; }
+  #score { font-size: 15px; color: #e8f5e8; margin-bottom: 12px; }
+  .buttons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  button { font-size: 15px; padding: 10px 16px; border: none; border-radius: 8px; background: #fff; color: #0b3d0b; font-weight: 700; cursor: pointer; }
+  button.secondary { background: #cfe8cf; }
+  button:disabled { opacity: .5; cursor: default; }
+  #mode-select { text-align: center; margin-top: 8px; }
+  #mode-select p { margin-bottom: 12px; }
+  .hidden { display: none !important; }
+  footer { margin-top: 18px; font-size: 12px; color: #a8d0a8; text-align: center; line-height: 1.6; }
+</style>
+</head>
+<body>
+<h1>OTHELLO</h1>
+<p class="sub">オセロ（リバーシ）— ブラウザ／スマホでそのまま遊べます</p>
+
+<div id="mode-select">
+  <p>モードを選んでください</p>
+  <div class="buttons">
+    <button id="btn-cpu">1：対CPU（あなたは黒・先手）</button>
+    <button id="btn-2p">2：人対人（交互にタップ）</button>
+  </div>
+  <p style="margin-top:14px;font-size:13px;color:#cfe8cf">Pygame版（othello.py）と同じルール・同じCPUの考え方です。</p>
+</div>
+
+<div id="game" class="hidden">
+  <div id="board" role="grid" aria-label="オセロ盤面"></div>
+  <div id="status"></div>
+  <div id="score"></div>
+  <div class="buttons">
+    <button id="btn-restart">R：はじめから</button>
+    <button id="btn-mode" class="secondary">モードを変える</button>
+  </div>
+</div>
+
+<footer>置けるマスには薄い緑のヒントが出ます ／ 置けないときは自動でパス ／<br>CPUは角を最優先する重み付き評価で手を選びます（Pygame版と同じ）</footer>
+
+<script>
+"use strict";
+// ---------- 盤面ロジック（Pygame版 othello.py と同じ） ----------
+const EMPTY = 0, BLACK = 1, WHITE = 2, SIZE = 8;
+const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+// AIのマス評価（角が最強、角の隣は危険）— Pygame版 WEIGHTS と同一
+const WEIGHTS = [
+  [100,-20, 10,  5,  5, 10,-20,100],
+  [-20,-40, -5, -5, -5, -5,-40,-20],
+  [ 10, -5,  8,  1,  1,  8, -5, 10],
+  [  5, -5,  1,  0,  0,  1, -5,  5],
+  [  5, -5,  1,  0,  0,  1, -5,  5],
+  [ 10, -5,  8,  1,  1,  8, -5, 10],
+  [-20,-40, -5, -5, -5, -5,-40,-20],
+  [100,-20, 10,  5,  5, 10,-20,100],
+];
+function opponent(c) { return c === BLACK ? WHITE : BLACK; }
+function newBoard() {
+  const b = Array.from({length: SIZE}, () => Array(SIZE).fill(EMPTY));
+  b[3][3] = WHITE; b[4][4] = WHITE; b[3][4] = BLACK; b[4][3] = BLACK;
+  return b;
+}
+function flipsFor(board, x, y, color) {
+  if (board[y][x] !== EMPTY) return [];
+  const opp = opponent(color), out = [];
+  for (const [dx, dy] of DIRS) {
+    const line = []; let cx = x + dx, cy = y + dy;
+    while (cx >= 0 && cx < SIZE && cy >= 0 && cy < SIZE && board[cy][cx] === opp) {
+      line.push([cx, cy]); cx += dx; cy += dy;
+    }
+    if (line.length && cx >= 0 && cx < SIZE && cy >= 0 && cy < SIZE && board[cy][cx] === color) out.push(...line);
+  }
+  return out;
+}
+function validMoves(board, color) {
+  const moves = new Map();
+  for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
+    const f = flipsFor(board, x, y, color);
+    if (f.length) moves.set(x + "," + y, f);
+  }
+  return moves;
+}
+function applyMove(board, x, y, color, flips) {
+  board[y][x] = color;
+  for (const [fx, fy] of flips) board[fy][fx] = color;
+}
+function countStones(board) {
+  let b = 0, w = 0;
+  for (const row of board) for (const v of row) { if (v === BLACK) b++; else if (v === WHITE) w++; }
+  return [b, w];
+}
+function aiChoose(board, color) {
+  const moves = validMoves(board, color);
+  if (!moves.size) return null;
+  let best = null, bestScore = -Infinity;
+  for (const [key, flips] of moves) {
+    const [x, y] = key.split(",").map(Number);
+    const s = WEIGHTS[y][x] * 10 + flips.length;
+    if (s > bestScore) { bestScore = s; best = [x, y, flips]; }
+  }
+  return best;
+}
+
+// ---------- 状態と描画 ----------
+let board = newBoard(), turn = BLACK, mode = null, gameOver = false, cpuThinking = false;
+const boardEl = document.getElementById("board");
+const statusEl = document.getElementById("status");
+const scoreEl = document.getElementById("score");
+const cells = [];
+for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) {
+  const c = document.createElement("div");
+  c.className = "cell"; c.dataset.x = x; c.dataset.y = y;
+  c.addEventListener("click", () => onCell(x, y));
+  boardEl.appendChild(c); cells.push(c);
+}
+function render() {
+  const moves = gameOver ? new Map() : validMoves(board, turn);
+  const humanTurn = mode === "2p" || turn === BLACK;
+  cells.forEach((c, i) => {
+    const x = i % SIZE, y = Math.floor(i / SIZE);
+    c.classList.toggle("hint", humanTurn && !gameOver && moves.has(x + "," + y));
+    const v = board[y][x];
+    c.innerHTML = v === EMPTY ? "" : '<div class="disc ' + (v === BLACK ? "black" : "white") + '"></div>';
+  });
+  const [b, w] = countStones(board);
+  scoreEl.textContent = "黒 " + b + "  —  " + w + " 白";
+  if (gameOver) {
+    const winner = b > w ? (mode === "2p" ? "黒の勝ち！" : "あなたの勝ち！")
+      : w > b ? (mode === "2p" ? "白の勝ち！" : "CPUの勝ち")
+      : "引き分け";
+    statusEl.textContent = "ゲーム終了　黒 " + b + " - " + w + " 白　" + winner;
+  } else if (mode === "2p") {
+    statusEl.textContent = (turn === BLACK ? "黒" : "白") + "の番です";
+  } else if (turn === BLACK) {
+    statusEl.textContent = "あなたの番です（黒）";
+  } else {
+    statusEl.textContent = "CPUが考えています…（白）";
+  }
+}
+// パス・終局の整理：手番の整理後に呼ぶ。true=ゲーム続行
+function settleTurn() {
+  let moves = validMoves(board, turn);
+  if (!moves.size && !validMoves(board, opponent(turn)).size) { gameOver = true; return; }
+  if (!moves.size) {
+    const passed = turn === BLACK ? "黒" : "白";
+    turn = opponent(turn);
+    statusEl.textContent = passed + "は置ける場所がないのでパス → " + (turn === BLACK ? "黒" : "白") + "の番です";
+  }
+}
+function maybeCpuMove() {
+  if (mode !== "cpu" || turn !== WHITE || gameOver) return;
+  cpuThinking = true; render();
+  setTimeout(() => {
+    const choice = aiChoose(board, WHITE);
+    if (choice) applyMove(board, choice[0], choice[1], WHITE, choice[2]);
+    turn = BLACK; cpuThinking = false;
+    settleTurn(); render(); maybeCpuMove();
+  }, 500);
+}
+function onCell(x, y) {
+  if (!mode || gameOver || cpuThinking) return;
+  if (mode === "cpu" && turn !== BLACK) return;
+  const moves = validMoves(board, turn);
+  const flips = moves.get(x + "," + y);
+  if (!flips) return;
+  applyMove(board, x, y, turn, flips);
+  turn = opponent(turn);
+  settleTurn(); render(); maybeCpuMove();
+}
+function startGame(newMode) {
+  mode = newMode; board = newBoard(); turn = BLACK; gameOver = false; cpuThinking = false;
+  document.getElementById("mode-select").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  render();
+}
+document.getElementById("btn-cpu").addEventListener("click", () => startGame("cpu"));
+document.getElementById("btn-2p").addEventListener("click", () => startGame("2p"));
+document.getElementById("btn-restart").addEventListener("click", () => startGame(mode));
+document.getElementById("btn-mode").addEventListener("click", () => {
+  mode = null; gameOver = false;
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("mode-select").classList.remove("hidden");
+});
+render();
+</script>
+</body>
+</html>
